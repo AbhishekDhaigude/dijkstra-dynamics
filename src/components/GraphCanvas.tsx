@@ -8,7 +8,8 @@ import {
   createNode, 
   createEdge, 
   edgeExists,
-  findEdgeMidpoint
+  findEdgeMidpoint,
+  getNextLetterLabel
 } from '@/utils/graphUtils';
 import { toast } from "sonner";
 
@@ -68,8 +69,9 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
         onSelectNode(clickedNode.id);
       }
     } else {
-      // Create a new node at click position
-      const newNode = createNode(x, y);
+      // Create a new node at click position with next letter
+      const nextLetter = getNextLetterLabel(graph.nodes);
+      const newNode = createNode(x, y, nextLetter);
       onGraphChange({
         nodes: [...graph.nodes, newNode],
         edges: [...graph.edges]

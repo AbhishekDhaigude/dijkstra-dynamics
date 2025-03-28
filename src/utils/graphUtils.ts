@@ -45,14 +45,37 @@ export const edgeExists = (edges: Edge[], sourceId: string, targetId: string): b
   );
 };
 
+// Generate the next letter label based on existing nodes
+export const getNextLetterLabel = (nodes: Node[]): string => {
+  if (nodes.length === 0) return 'A';
+  
+  // Get all existing letter labels
+  const existingLabels = nodes.map(node => node.label || '');
+  
+  // Find the highest letter used
+  let highestChar = 'A';
+  existingLabels.forEach(label => {
+    if (label && label.length === 1 && label >= 'A' && label <= 'Z' && label > highestChar) {
+      highestChar = label;
+    }
+  });
+  
+  // Get the next letter in sequence
+  const nextCharCode = highestChar.charCodeAt(0) + 1;
+  // If we've gone beyond 'Z', loop back to 'A'
+  return nextCharCode <= 90 ? String.fromCharCode(nextCharCode) : 'A';
+};
+
 // Create a new node
 export const createNode = (x: number, y: number, label?: string): Node => {
   const id = generateId();
+  const nodeLabel = label || getNextLetterLabel([]);
+  
   return {
     id,
     x,
     y,
-    label: label || id.substring(0, 2).toUpperCase(),
+    label: nodeLabel,
     status: 'default'
   };
 };
