@@ -20,8 +20,14 @@ const Header: React.FC<HeaderProps> = ({ className, ...props }) => {
         <h1 className="text-xl font-medium tracking-tight text-gray-900">Dijkstra Dynamics</h1>
       </div>
       <div className="hidden sm:flex items-center space-x-6">
-        <span className="text-sm text-gray-600 hover:text-gray-900 transition-colors cursor-pointer">About</span>
-        <span className="text-sm text-gray-600 hover:text-gray-900 transition-colors cursor-pointer">How It Works</span>
+        <a 
+          href="https://www.geeksforgeeks.org/dijkstras-shortest-path-algorithm-greedy-algo-7/" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="text-sm text-gray-600 hover:text-gray-900 transition-colors"
+        >
+          How It Works
+        </a>
         <a 
           href="https://en.wikipedia.org/wiki/Dijkstra%27s_algorithm" 
           target="_blank" 
