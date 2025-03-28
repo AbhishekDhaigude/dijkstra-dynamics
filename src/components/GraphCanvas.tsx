@@ -37,6 +37,7 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
   const [pendingEdge, setPendingEdge] = useState<{source: string, target: string} | null>(null);
   const [edgeWeight, setEdgeWeight] = useState<number>(1);
+  const [popoverOpen, setPopoverOpen] = useState(false);
   
   const handleCanvasClick = (e: React.MouseEvent) => {
     if (mode !== 'edit' || isRunning) return;
@@ -71,6 +72,9 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
           } else {
             setEdgeWeight(1);
           }
+          
+          // Open the popover
+          setPopoverOpen(true);
         } else {
           toast.info("Edge already exists between these nodes");
           setSelectedNode(null);
@@ -111,11 +115,13 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
     toast.success(`Edge created with weight ${edgeWeight}`);
     setPendingEdge(null);
     setSelectedNode(null);
+    setPopoverOpen(false);
   };
   
   const cancelEdgeCreation = () => {
     setPendingEdge(null);
     setSelectedNode(null);
+    setPopoverOpen(false);
   };
   
   const handleNodeDrag = (nodeId: string, x: number, y: number) => {
@@ -255,7 +261,8 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
       </svg>
       
       {/* Edge Weight Popover */}
-      <Popover open={pendingEdge !== null} onOpenChange={(open) => !open && cancelEdgeCreation()}>
+      <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+        <PopoverTrigger className="hidden">Open</PopoverTrigger>
         <PopoverContent className="w-80">
           <div className="space-y-4">
             <h3 className="font-medium text-sm">Set Edge Weight</h3>
