@@ -80,24 +80,11 @@ export const createNode = (x: number, y: number, label?: string): Node => {
   };
 };
 
-// Create a new edge
-export const createEdge = (sourceId: string, targetId: string, nodes: Node[]): Edge | null => {
-  if (sourceId === targetId) return null;
-  
-  const sourceNode = nodes.find(node => node.id === sourceId);
-  const targetNode = nodes.find(node => node.id === targetId);
-  
-  if (!sourceNode || !targetNode) return null;
-  
-  const distance = calculateDistance(sourceNode.x, sourceNode.y, targetNode.x, targetNode.y);
-  const weight = Math.max(1, Math.round(distance / 30));
-  
+// Find the midpoint of an edge for placing the weight label
+export const findEdgeMidpoint = (sourceNode: Node, targetNode: Node): { x: number, y: number } => {
   return {
-    id: `${sourceId}-${targetId}`,
-    source: sourceId,
-    target: targetId,
-    weight,
-    status: 'default'
+    x: (sourceNode.x + targetNode.x) / 2,
+    y: (sourceNode.y + targetNode.y) / 2
   };
 };
 
@@ -137,14 +124,6 @@ export const createAdjacencyList = (graph: Graph): Map<string, Array<{node: stri
   });
   
   return adjacencyList;
-};
-
-// Find the midpoint of an edge for placing the weight label
-export const findEdgeMidpoint = (sourceNode: Node, targetNode: Node): { x: number, y: number } => {
-  return {
-    x: (sourceNode.x + targetNode.x) / 2,
-    y: (sourceNode.y + targetNode.y) / 2
-  };
 };
 
 // Generate a simple demo graph

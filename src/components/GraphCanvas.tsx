@@ -12,6 +12,9 @@ import {
   getNextLetterLabel
 } from '@/utils/graphUtils';
 import { toast } from "sonner";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Slider } from "@/components/ui/slider";
+import { Button } from "@/components/ui/button";
 
 interface GraphCanvasProps {
   graph: Graph;
@@ -34,7 +37,8 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
 }) => {
   const canvasRef = useRef<HTMLDivElement>(null);
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
-  const [sourceNode, setSourceNode] = useState<string | null>(null);
+  const [pendingEdge, setPendingEdge] = useState<{source: string, target: string} | null>(null);
+  const [edgeWeight, setEdgeWeight] = useState<number>(1);
   
   const handleCanvasClick = (e: React.MouseEvent) => {
     if (mode !== 'edit' || isRunning) return;
@@ -48,21 +52,31 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
     const clickedNode = findNodeAt(graph.nodes, x, y);
     
     if (clickedNode) {
-      // If a node is already selected, create an edge between them
+      // If a node is already selected, prepare to create an edge between them
       if (selectedNode && selectedNode !== clickedNode.id) {
         if (!edgeExists(graph.edges, selectedNode, clickedNode.id)) {
-          const newEdge = createEdge(selectedNode, clickedNode.id, graph.nodes);
-          if (newEdge) {
-            onGraphChange({
-              nodes: [...graph.nodes],
-              edges: [...graph.edges, newEdge]
-            });
-            toast.success(`Edge created with weight ${newEdge.weight}`);
+          // Set up pending edge and show weight selection popover
+          setPendingEdge({
+            source: selectedNode,
+            target: clickedNode.id
+          });
+          
+          // Calculate default weight based on distance
+          const sourceNode = graph.nodes.find(n => n.id === selectedNode);
+          const targetNode = clickedNode;
+          if (sourceNode && targetNode) {
+            const dx = targetNode.x - sourceNode.x;
+            const dy = targetNode.y - sourceNode.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            const defaultWeight = Math.max(1, Math.round(distance / 30));
+            setEdgeWeight(defaultWeight);
+          } else {
+            setEdgeWeight(1);
           }
         } else {
           toast.info("Edge already exists between these nodes");
+          setSelectedNode(null);
         }
-        setSelectedNode(null);
       } else {
         // Select this node
         setSelectedNode(clickedNode.id);
@@ -78,6 +92,32 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
       });
       setSelectedNode(null);
     }
+  };
+  
+  const confirmEdgeCreation = () => {
+    if (!pendingEdge) return;
+    
+    const newEdge = {
+      id: `${pendingEdge.source}-${pendingEdge.target}`,
+      source: pendingEdge.source,
+      target: pendingEdge.target,
+      weight: edgeWeight,
+      status: 'default' as const
+    };
+    
+    onGraphChange({
+      nodes: [...graph.nodes],
+      edges: [...graph.edges, newEdge]
+    });
+    
+    toast.success(`Edge created with weight ${edgeWeight}`);
+    setPendingEdge(null);
+    setSelectedNode(null);
+  };
+  
+  const cancelEdgeCreation = () => {
+    setPendingEdge(null);
+    setSelectedNode(null);
   };
   
   const handleNodeDrag = (nodeId: string, x: number, y: number) => {
@@ -216,6 +256,32 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
         ))}
       </svg>
       
+      {/* Edge Weight Popover */}
+      <Popover open={pendingEdge !== null} onOpenChange={(open) => !open && cancelEdgeCreation()}>
+        <PopoverContent className="w-80">
+          <div className="space-y-4">
+            <h3 className="font-medium text-sm">Set Edge Weight</h3>
+            <div className="flex items-center space-x-2">
+              <span className="text-sm">1</span>
+              <Slider
+                value={[edgeWeight]}
+                min={1}
+                max={20}
+                step={1}
+                onValueChange={(value) => setEdgeWeight(value[0])}
+                className="flex-1"
+              />
+              <span className="text-sm">20</span>
+            </div>
+            <div className="text-center text-lg font-bold">{edgeWeight}</div>
+            <div className="flex justify-end space-x-2">
+              <Button variant="outline" size="sm" onClick={cancelEdgeCreation}>Cancel</Button>
+              <Button size="sm" onClick={confirmEdgeCreation}>Confirm</Button>
+            </div>
+          </div>
+        </PopoverContent>
+      </Popover>
+      
       {/* Instructions */}
       {mode === 'edit' && !isRunning && graph.nodes.length === 0 && (
         <div className="absolute inset-0 flex items-center justify-center">
@@ -236,3 +302,4 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
 };
 
 export default GraphCanvas;
+
