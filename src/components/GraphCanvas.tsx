@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 import { 
   Node, 
@@ -6,7 +5,6 @@ import {
   Graph, 
   findNodeAt, 
   createNode, 
-  createEdge, 
   edgeExists,
   findEdgeMidpoint,
   getNextLetterLabel
@@ -302,4 +300,3 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
 };
 
 export default GraphCanvas;
-
