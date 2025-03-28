@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import Header from '@/components/Header';
 import GraphCanvas from '@/components/GraphCanvas';
@@ -234,6 +233,7 @@ const Index = () => {
               onSelectEndNode={handleSelectEndNode}
               editorMode={editorMode}
               setEditorMode={setEditorMode}
+              graph={graph}
             />
             
             <InfoPanel 

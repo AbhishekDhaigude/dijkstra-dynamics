@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { cn } from "@/lib/utils";
 import { DijkstraStep } from '@/utils/dijkstra';
@@ -16,6 +15,13 @@ const InfoPanel: React.FC<InfoPanelProps> = ({
   shortestPath,
   shortestDistance
 }) => {
+  const getNodeLabel = (nodeId: string): string => {
+    if (!currentStep) return nodeId;
+    
+    const node = currentStep.graph.nodes.find(n => n.id === nodeId);
+    return node?.label || nodeId;
+  };
+  
   if (!currentStep) {
     return (
       <div
@@ -73,7 +79,7 @@ const InfoPanel: React.FC<InfoPanelProps> = ({
       <div className="mb-4">
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm text-gray-600">Current Node:</span>
-          <span className="text-sm font-medium">{currentNode || 'None (Algorithm finished)'}</span>
+          <span className="text-sm font-medium">{currentNode ? getNodeLabel(currentNode) : 'None (Algorithm finished)'}</span>
         </div>
         <div className="flex items-center justify-between">
           <span className="text-sm text-gray-600">Visited Nodes:</span>
@@ -96,12 +102,12 @@ const InfoPanel: React.FC<InfoPanelProps> = ({
             <tbody>
               {Array.from(distances.entries()).map(([nodeId, distance]) => (
                 <tr key={nodeId} className="border-b border-gray-100 last:border-0">
-                  <td className="p-1 font-medium">{nodeId}</td>
+                  <td className="p-1 font-medium">{getNodeLabel(nodeId)}</td>
                   <td className="p-1 text-right">
                     {distance === Infinity ? '∞' : distance}
                   </td>
                   <td className="p-1 text-right text-gray-600">
-                    {previous.get(nodeId) || '-'}
+                    {previous.get(nodeId) ? getNodeLabel(previous.get(nodeId)!) : '-'}
                   </td>
                 </tr>
               ))}
@@ -120,7 +126,7 @@ const InfoPanel: React.FC<InfoPanelProps> = ({
               <div className="mb-2">
                 <span className="text-xs text-gray-700">Shortest Path: </span>
                 <span className="text-xs font-medium">
-                  {shortestPath.join(' → ')}
+                  {shortestPath.map(nodeId => getNodeLabel(nodeId)).join(' → ')}
                 </span>
               </div>
               <div>

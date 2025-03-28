@@ -3,6 +3,7 @@ import React from 'react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { DijkstraStep } from '@/utils/dijkstra';
+import { Graph } from '@/utils/graphUtils';
 
 interface ControlPanelProps {
   className?: string;
@@ -20,6 +21,7 @@ interface ControlPanelProps {
   onSelectEndNode: () => void;
   editorMode: 'edit' | 'view';
   setEditorMode: (mode: 'edit' | 'view') => void;
+  graph: Graph; // Added to access node labels
 }
 
 const ControlPanel: React.FC<ControlPanelProps> = ({
@@ -37,8 +39,16 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
   onSelectStartNode,
   onSelectEndNode,
   editorMode,
-  setEditorMode
+  setEditorMode,
+  graph
 }) => {
+  // Helper function to get node label from ID
+  const getNodeLabel = (nodeId: string | null): string => {
+    if (!nodeId) return 'Not selected';
+    const node = graph.nodes.find(n => n.id === nodeId);
+    return node?.label || nodeId;
+  };
+
   return (
     <div
       className={cn(
@@ -54,7 +64,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
           <span className="text-sm text-gray-600">Start Node:</span>
           <div className="flex items-center gap-2">
             <div className="h-3 w-3 rounded-full bg-node-start"></div>
-            <span className="text-sm font-medium">{startNodeId || 'Not selected'}</span>
+            <span className="text-sm font-medium">{getNodeLabel(startNodeId)}</span>
             <Button 
               variant="outline" 
               size="sm" 
@@ -71,7 +81,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
           <span className="text-sm text-gray-600">End Node:</span>
           <div className="flex items-center gap-2">
             <div className="h-3 w-3 rounded-full bg-node-end"></div>
-            <span className="text-sm font-medium">{endNodeId || 'Not selected'}</span>
+            <span className="text-sm font-medium">{getNodeLabel(endNodeId)}</span>
             <Button 
               variant="outline" 
               size="sm" 
