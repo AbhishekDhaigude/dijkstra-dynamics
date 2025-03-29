@@ -59,6 +59,15 @@ const InfoPanel: React.FC<InfoPanelProps> = ({
               <li>• Run the algorithm to find the shortest path</li>
             </ul>
           </div>
+          
+          <div className="p-3 bg-amber-50 rounded-md border border-amber-100">
+            <h4 className="text-sm font-medium text-gray-900 mb-1">Limitations</h4>
+            <ul className="text-xs text-gray-700 space-y-1">
+              <li>• <span className="font-medium">Negative Edges:</span> Dijkstra's algorithm doesn't work with negative edge weights as it can lead to incorrect results</li>
+              <li>• <span className="font-medium">Negative Cycles:</span> Graphs with negative cycles (where the sum of edges in a cycle is negative) cause the algorithm to fail</li>
+              <li>• For graphs with negative weights, use Bellman-Ford or other algorithms instead</li>
+            </ul>
+          </div>
         </div>
       </div>
     );
@@ -139,6 +148,12 @@ const InfoPanel: React.FC<InfoPanelProps> = ({
               No path exists between the selected nodes.
             </div>
           )}
+          
+          <div className="mt-3 pt-2 border-t border-blue-100">
+            <p className="text-xs text-amber-700">
+              <span className="font-medium">Note:</span> Remember that Dijkstra's algorithm only works with positive edge weights. Negative weights or cycles would invalidate the results.
+            </p>
+          </div>
         </div>
       )}
     </div>
