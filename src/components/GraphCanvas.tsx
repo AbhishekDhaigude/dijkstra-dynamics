@@ -38,13 +38,6 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
   const [pendingEdge, setPendingEdge] = useState<{source: string, target: string} | null>(null);
   const [edgeWeight, setEdgeWeight] = useState<number>(1);
   const [popoverOpen, setPopoverOpen] = useState(false);
-  const popoverTriggerRef = useRef<HTMLButtonElement>(null);
-  
-  useEffect(() => {
-    if (pendingEdge && popoverTriggerRef.current && !popoverOpen) {
-      popoverTriggerRef.current.click();
-    }
-  }, [pendingEdge, popoverOpen]);
   
   const handleCanvasClick = (e: React.MouseEvent) => {
     if (mode !== 'edit' || isRunning) return;
@@ -58,13 +51,16 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
     const clickedNode = findNodeAt(graph.nodes, x, y);
     
     if (clickedNode) {
+      // If a node is already selected, prepare to create an edge between them
       if (selectedNode && selectedNode !== clickedNode.id) {
         if (!edgeExists(graph.edges, selectedNode, clickedNode.id)) {
+          // Set up pending edge and show weight selection popover
           setPendingEdge({
             source: selectedNode,
             target: clickedNode.id
           });
           
+          // Calculate default weight based on distance
           const sourceNode = graph.nodes.find(n => n.id === selectedNode);
           const targetNode = clickedNode;
           if (sourceNode && targetNode) {
@@ -76,15 +72,20 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
           } else {
             setEdgeWeight(1);
           }
+          
+          // Open the popover
+          setPopoverOpen(true);
         } else {
           toast.info("Edge already exists between these nodes");
           setSelectedNode(null);
         }
       } else {
+        // Select this node
         setSelectedNode(clickedNode.id);
         onSelectNode(clickedNode.id);
       }
     } else {
+      // Create a new node at click position with next letter
       const nextLetter = getNextLetterLabel(graph.nodes);
       const newNode = createNode(x, y, nextLetter);
       onGraphChange({
@@ -123,14 +124,6 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
     setPopoverOpen(false);
   };
   
-  const handlePopoverOpenChange = (open: boolean) => {
-    setPopoverOpen(open);
-    if (!open && pendingEdge) {
-      setPendingEdge(null);
-      setSelectedNode(null);
-    }
-  };
-  
   const handleNodeDrag = (nodeId: string, x: number, y: number) => {
     if (mode !== 'edit' || isRunning) return;
     
@@ -148,6 +141,7 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
     e.preventDefault();
     if (mode !== 'edit' || isRunning) return;
     
+    // Remove the node and any connected edges
     const updatedNodes = graph.nodes.filter(node => node.id !== nodeId);
     const updatedEdges = graph.edges.filter(
       edge => edge.source !== nodeId && edge.target !== nodeId
@@ -169,6 +163,7 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
     e.preventDefault();
     if (mode !== 'edit' || isRunning) return;
     
+    // Remove the edge
     const updatedEdges = graph.edges.filter(edge => edge.id !== edgeId);
     
     onGraphChange({
@@ -202,6 +197,7 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
       onClick={handleCanvasClick}
     >
       <svg className="w-full h-full">
+        {/* Edges */}
         {graph.edges.map(edge => {
           const sourceNode = graph.nodes.find(n => n.id === edge.source);
           const targetNode = graph.nodes.find(n => n.id === edge.target);
@@ -232,6 +228,7 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
           );
         })}
         
+        {/* Nodes */}
         {graph.nodes.map(node => (
           <g 
             key={node.id}
@@ -263,8 +260,9 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
         ))}
       </svg>
       
-      <Popover open={popoverOpen} onOpenChange={handlePopoverOpenChange}>
-        <PopoverTrigger ref={popoverTriggerRef} className="hidden">Open</PopoverTrigger>
+      {/* Edge Weight Popover */}
+      <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+        <PopoverTrigger className="hidden">Open</PopoverTrigger>
         <PopoverContent className="w-80">
           <div className="space-y-4">
             <h3 className="font-medium text-sm">Set Edge Weight</h3>
@@ -289,6 +287,7 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
         </PopoverContent>
       </Popover>
       
+      {/* Instructions */}
       {mode === 'edit' && !isRunning && graph.nodes.length === 0 && (
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="text-center p-6 rounded-lg bg-white/60 backdrop-blur-sm max-w-sm">
