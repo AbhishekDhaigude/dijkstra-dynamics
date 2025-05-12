@@ -39,6 +39,7 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
   const [pendingEdge, setPendingEdge] = useState<{source: string, target: string} | null>(null);
   const [edgeWeight, setEdgeWeight] = useState<number>(1);
   const [popoverOpen, setPopoverOpen] = useState(false);
+  const [selectingForAlgorithm, setSelectingForAlgorithm] = useState(false);
   
   // Force the popover to open when pendingEdge is set
   useEffect(() => {
@@ -64,6 +65,13 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
     const clickedNode = findNodeAt(graph.nodes, x, y);
     
     if (clickedNode) {
+      // Check if we're selecting start/end nodes for the algorithm
+      if (selectingForAlgorithm) {
+        onSelectNode(clickedNode.id);
+        setSelectingForAlgorithm(false);
+        return;
+      }
+      
       // If a node is already selected, prepare to create an edge between them
       if (selectedNode && selectedNode !== clickedNode.id) {
         if (!edgeExists(graph.edges, selectedNode, clickedNode.id)) {
@@ -92,7 +100,6 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
       } else {
         // Select this node
         setSelectedNode(clickedNode.id);
-        onSelectNode(clickedNode.id);
       }
     } else {
       // Create a new node at click position with next letter
@@ -105,6 +112,41 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
       setSelectedNode(null);
     }
   };
+  
+  // Update to handle node selection for start/end nodes properly
+  useEffect(() => {
+    const handleNodeSelectionForAlgorithm = () => {
+      setSelectingForAlgorithm(true);
+      // Clear any selected node to prevent edge creation
+      setSelectedNode(null);
+    };
+    
+    // Listen for parent component requesting node selection
+    if (startNodeId === null || endNodeId === null) {
+      handleNodeSelectionForAlgorithm();
+    }
+    
+    return () => {
+      // Clean up effect
+    };
+  }, [startNodeId, endNodeId]);
+  
+  // Handle external requests to select a node
+  useEffect(() => {
+    const handleExternalNodeSelection = () => {
+      setSelectingForAlgorithm(true);
+      setSelectedNode(null);
+      setPendingEdge(null);
+      setPopoverOpen(false);
+    };
+    
+    // This effect handles when the parent component calls onSelectStartNode or onSelectEndNode
+    const originalOnSelectNode = onSelectNode;
+    
+    return () => {
+      // Clean up
+    };
+  }, [onSelectNode]);
   
   const confirmEdgeCreation = () => {
     if (!pendingEdge) return;
@@ -132,6 +174,14 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
     setPendingEdge(null);
     setSelectedNode(null);
     setPopoverOpen(false);
+  };
+  
+  // Handle node selection for algorithm
+  const handleNodeSelectionForAlgorithm = (nodeId: string) => {
+    if (selectingForAlgorithm) {
+      onSelectNode(nodeId);
+      setSelectingForAlgorithm(false);
+    }
   };
   
   const handleNodeDrag = (nodeId: string, x: number, y: number) => {
@@ -244,6 +294,12 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
             key={node.id}
             onContextMenu={(e) => handleNodeContextMenu(e, node.id)}
             className="cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (selectingForAlgorithm) {
+                handleNodeSelectionForAlgorithm(node.id);
+              }
+            }}
           >
             <circle
               cx={node.x}
