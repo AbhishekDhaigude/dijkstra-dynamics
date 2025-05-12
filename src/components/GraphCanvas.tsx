@@ -40,6 +40,7 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
   const [edgeWeight, setEdgeWeight] = useState<number>(1);
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [selectingForAlgorithm, setSelectingForAlgorithm] = useState(false);
+  const [nodeSelectionPurpose, setNodeSelectionPurpose] = useState<'start' | 'end' | null>(null);
   
   // Force the popover to open when pendingEdge is set
   useEffect(() => {
@@ -54,7 +55,9 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
   }, [pendingEdge]);
   
   const handleCanvasClick = (e: React.MouseEvent) => {
-    if (mode !== 'edit' || isRunning) return;
+    if (mode !== 'edit' || isRunning) {
+      return;
+    }
     
     if (!canvasRef.current) return;
     
@@ -67,8 +70,21 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
     if (clickedNode) {
       // Check if we're selecting start/end nodes for the algorithm
       if (selectingForAlgorithm) {
+        // Prevent selecting a node that's already set as the other endpoint
+        if (nodeSelectionPurpose === 'start' && clickedNode.id === endNodeId) {
+          toast.error("Can't use the same node for both start and end");
+          return;
+        }
+        
+        if (nodeSelectionPurpose === 'end' && clickedNode.id === startNodeId) {
+          toast.error("Can't use the same node for both start and end");
+          return;
+        }
+        
         onSelectNode(clickedNode.id);
         setSelectingForAlgorithm(false);
+        setNodeSelectionPurpose(null);
+        toast.success(`Selected node ${clickedNode.label} as ${nodeSelectionPurpose === 'start' ? 'start' : 'end'} node`);
         return;
       }
       
@@ -100,6 +116,7 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
       } else {
         // Select this node
         setSelectedNode(clickedNode.id);
+        toast.info(`Node ${clickedNode.label} selected. Click another node to create an edge.`);
       }
     } else {
       // Create a new node at click position with next letter
@@ -110,21 +127,26 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
         edges: [...graph.edges]
       });
       setSelectedNode(null);
+      toast.success(`Created node ${nextLetter}`);
     }
   };
   
-  // Update to handle node selection for start/end nodes properly
+  // Monitor for selection mode changes from parent component
   useEffect(() => {
-    const handleNodeSelectionForAlgorithm = () => {
-      setSelectingForAlgorithm(true);
-      // Clear any selected node to prevent edge creation
-      setSelectedNode(null);
+    const detectSelectionModeChange = () => {
+      if (startNodeId === null) {
+        setNodeSelectionPurpose('start');
+        setSelectingForAlgorithm(true);
+      } else if (endNodeId === null) {
+        setNodeSelectionPurpose('end');
+        setSelectingForAlgorithm(true);
+      } else {
+        setNodeSelectionPurpose(null);
+        setSelectingForAlgorithm(false);
+      }
     };
     
-    // Listen for parent component requesting node selection
-    if (startNodeId === null || endNodeId === null) {
-      handleNodeSelectionForAlgorithm();
-    }
+    detectSelectionModeChange();
     
     return () => {
       // Clean up effect
@@ -133,20 +155,31 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
   
   // Handle external requests to select a node
   useEffect(() => {
-    const handleExternalNodeSelection = () => {
-      setSelectingForAlgorithm(true);
-      setSelectedNode(null);
-      setPendingEdge(null);
-      setPopoverOpen(false);
-    };
-    
-    // This effect handles when the parent component calls onSelectStartNode or onSelectEndNode
-    const originalOnSelectNode = onSelectNode;
-    
     return () => {
       // Clean up
     };
   }, [onSelectNode]);
+  
+  // This function handles the external "Select Start" and "Select End" button clicks
+  const handleExternalNodeSelectionRequest = (purpose: 'start' | 'end') => {
+    setNodeSelectionPurpose(purpose);
+    setSelectingForAlgorithm(true);
+    setSelectedNode(null);
+    setPendingEdge(null);
+    setPopoverOpen(false);
+    
+    toast.info(`Click a node to set as ${purpose} node`);
+  };
+  
+  // Expose the function to parent through a ref
+  useEffect(() => {
+    // Listen for controls from parent component
+    if (!startNodeId) {
+      handleExternalNodeSelectionRequest('start');
+    } else if (!endNodeId) {
+      handleExternalNodeSelectionRequest('end');
+    }
+  }, [startNodeId, endNodeId]);
   
   const confirmEdgeCreation = () => {
     if (!pendingEdge) return;
@@ -164,7 +197,10 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
       edges: [...graph.edges, newEdge]
     });
     
-    toast.success(`Edge created with weight ${edgeWeight}`);
+    const sourceLabel = graph.nodes.find(n => n.id === pendingEdge.source)?.label;
+    const targetLabel = graph.nodes.find(n => n.id === pendingEdge.target)?.label;
+    
+    toast.success(`Edge created from ${sourceLabel} to ${targetLabel} with weight ${edgeWeight}`);
     setPendingEdge(null);
     setSelectedNode(null);
     setPopoverOpen(false);
@@ -179,8 +215,22 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
   // Handle node selection for algorithm
   const handleNodeSelectionForAlgorithm = (nodeId: string) => {
     if (selectingForAlgorithm) {
+      const node = graph.nodes.find(n => n.id === nodeId);
+      if (!node) return;
+      
+      // Verify that this isn't already set as the other endpoint
+      if (nodeSelectionPurpose === 'start' && nodeId === endNodeId) {
+        toast.error("Cannot use the same node for both start and end");
+        return;
+      }
+      if (nodeSelectionPurpose === 'end' && nodeId === startNodeId) {
+        toast.error("Cannot use the same node for both start and end");
+        return;
+      }
+      
       onSelectNode(nodeId);
       setSelectingForAlgorithm(false);
+      setNodeSelectionPurpose(null);
     }
   };
   
@@ -201,7 +251,14 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
     e.preventDefault();
     if (mode !== 'edit' || isRunning) return;
     
+    // Check if it's a start or end node
+    if (nodeId === startNodeId || nodeId === endNodeId) {
+      toast.error("Cannot remove start or end node");
+      return;
+    }
+    
     // Remove the node and any connected edges
+    const nodeToRemove = graph.nodes.find(n => n.id === nodeId);
     const updatedNodes = graph.nodes.filter(node => node.id !== nodeId);
     const updatedEdges = graph.edges.filter(
       edge => edge.source !== nodeId && edge.target !== nodeId
@@ -216,12 +273,19 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
       setSelectedNode(null);
     }
     
-    toast.info("Node removed");
+    toast.info(`Node ${nodeToRemove?.label || nodeId} removed`);
   };
   
   const handleEdgeContextMenu = (e: React.MouseEvent, edgeId: string) => {
     e.preventDefault();
     if (mode !== 'edit' || isRunning) return;
+    
+    // Get edge details for feedback
+    const edge = graph.edges.find(e => e.id === edgeId);
+    if (!edge) return;
+    
+    const sourceNode = graph.nodes.find(n => n.id === edge.source);
+    const targetNode = graph.nodes.find(n => n.id === edge.target);
     
     // Remove the edge
     const updatedEdges = graph.edges.filter(edge => edge.id !== edgeId);
@@ -231,7 +295,7 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
       edges: updatedEdges
     });
     
-    toast.info("Edge removed");
+    toast.info(`Edge from ${sourceNode?.label || edge.source} to ${targetNode?.label || edge.target} removed`);
   };
   
   const getNodeColor = (node: Node) => {
@@ -368,6 +432,15 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
             <div className="inline-flex items-center px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs">
               Start by creating a few nodes
             </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Node selection mode indicator */}
+      {selectingForAlgorithm && (
+        <div className="absolute top-4 left-0 right-0 flex justify-center">
+          <div className="bg-blue-100 text-blue-800 text-sm font-medium px-4 py-2 rounded-full shadow-sm">
+            Select {nodeSelectionPurpose === 'start' ? 'start' : 'end'} node
           </div>
         </div>
       )}

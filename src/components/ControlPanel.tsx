@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { DijkstraStep } from '@/utils/dijkstra';
 import { Graph } from '@/utils/graphUtils';
+import { toast } from "sonner";
 
 interface ControlPanelProps {
   className?: string;
@@ -48,6 +49,34 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
     const node = graph.nodes.find(n => n.id === nodeId);
     return node?.label || nodeId;
   };
+  
+  const handleSelectStartNode = () => {
+    if (isRunning) {
+      toast.error("Cannot change start node while algorithm is running");
+      return;
+    }
+    
+    if (graph.nodes.length === 0) {
+      toast.error("Please create at least one node first");
+      return;
+    }
+    
+    onSelectStartNode();
+  };
+  
+  const handleSelectEndNode = () => {
+    if (isRunning) {
+      toast.error("Cannot change end node while algorithm is running");
+      return;
+    }
+    
+    if (graph.nodes.length === 0) {
+      toast.error("Please create at least one node first");
+      return;
+    }
+    
+    onSelectEndNode();
+  };
 
   return (
     <div
@@ -69,7 +98,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
               variant="outline" 
               size="sm" 
               className="h-7 text-xs"
-              onClick={onSelectStartNode}
+              onClick={handleSelectStartNode}
               disabled={isRunning || editorMode === 'view'}
             >
               Select
@@ -86,7 +115,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
               variant="outline" 
               size="sm" 
               className="h-7 text-xs"
-              onClick={onSelectEndNode}
+              onClick={handleSelectEndNode}
               disabled={isRunning || editorMode === 'view'}
             >
               Select

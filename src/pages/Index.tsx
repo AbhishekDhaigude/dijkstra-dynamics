@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import Header from '@/components/Header';
 import GraphCanvas from '@/components/GraphCanvas';
@@ -42,18 +43,37 @@ const Index = () => {
   // Handle node selection for start/end nodes
   const handleNodeSelection = (nodeId: string) => {
     if (selectingStartNode) {
+      if (nodeId === endNodeId) {
+        toast.error("Start and end nodes must be different");
+        return;
+      }
+      
       setStartNodeId(nodeId);
       setSelectingStartNode(false);
-      toast.success(`Node ${nodeId} set as start node`);
+      
+      const node = graph.nodes.find(n => n.id === nodeId);
+      toast.success(`Node ${node?.label || nodeId} set as start node`);
     } else if (selectingEndNode) {
+      if (nodeId === startNodeId) {
+        toast.error("Start and end nodes must be different");
+        return;
+      }
+      
       setEndNodeId(nodeId);
       setSelectingEndNode(false);
-      toast.success(`Node ${nodeId} set as end node`);
+      
+      const node = graph.nodes.find(n => n.id === nodeId);
+      toast.success(`Node ${node?.label || nodeId} set as end node`);
     }
   };
   
   // Start selecting start node
   const handleSelectStartNode = () => {
+    if (graph.nodes.length === 0) {
+      toast.error("Please create at least one node first");
+      return;
+    }
+    
     setSelectingStartNode(true);
     setSelectingEndNode(false);
     toast.info("Click on a node to set as start node");
@@ -61,6 +81,11 @@ const Index = () => {
   
   // Start selecting end node
   const handleSelectEndNode = () => {
+    if (graph.nodes.length === 0) {
+      toast.error("Please create at least one node first");
+      return;
+    }
+    
     setSelectingEndNode(true);
     setSelectingStartNode(false);
     toast.info("Click on a node to set as end node");
@@ -78,21 +103,36 @@ const Index = () => {
       return;
     }
     
+    if (graph.nodes.length < 2) {
+      toast.error("Graph must have at least two nodes");
+      return;
+    }
+    
     // Reset any previous run
     const resetGraph = resetGraphStatus(graph);
     setGraph(resetGraph);
     
-    // Run the algorithm
-    const result = runDijkstraAlgorithm(resetGraph, startNodeId, endNodeId);
-    setResult(result);
-    setAlgorithmSteps(result.steps);
-    setCurrentStepIndex(0);
-    setIsRunning(true);
-    setEditorMode('view');
-    
-    // Update the graph with the initial step
-    if (result.steps.length > 0) {
-      setGraph(result.steps[0].graph);
+    try {
+      // Run the algorithm
+      const result = runDijkstraAlgorithm(resetGraph, startNodeId, endNodeId);
+      
+      if (result.steps.length === 0) {
+        toast.error("No path exists between start and end nodes");
+        return;
+      }
+      
+      setResult(result);
+      setAlgorithmSteps(result.steps);
+      setCurrentStepIndex(0);
+      setIsRunning(true);
+      setEditorMode('view');
+      
+      // Update the graph with the initial step
+      if (result.steps.length > 0) {
+        setGraph(result.steps[0].graph);
+      }
+    } catch (error) {
+      toast.error("Error running algorithm: " + (error instanceof Error ? error.message : "Unknown error"));
     }
   };
   
@@ -111,6 +151,8 @@ const Index = () => {
     // Reset the graph
     const resetGraph = resetGraphStatus(graph);
     setGraph(resetGraph);
+    
+    toast.info("Algorithm reset");
   };
   
   // Move to the next step
@@ -169,6 +211,11 @@ const Index = () => {
   }, []);
   
   const handleLoadDemoGraph = () => {
+    if (isRunning) {
+      toast.error("Cannot load demo graph while algorithm is running");
+      return;
+    }
+    
     resetAlgorithm();
     const demoGraph = generateDemoGraph();
     setGraph(demoGraph);
@@ -178,6 +225,11 @@ const Index = () => {
   };
   
   const handleClearGraph = () => {
+    if (isRunning) {
+      toast.error("Cannot clear graph while algorithm is running");
+      return;
+    }
+    
     resetAlgorithm();
     setGraph({ nodes: [], edges: [] });
     setStartNodeId(null);
