@@ -124,7 +124,7 @@
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-.glass-dark {
+.dark .glass {
   background: rgba(20, 20, 20, 0.6);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
@@ -174,4 +174,18 @@
   opacity: 0;
   transform: translateY(-10px);
   transition: opacity 300ms, transform 300ms;
+}
+
+/* Dark mode transitions */
+html.dark {
+  color-scheme: dark;
+}
+
+html {
+  transition: background-color 0.3s ease;
+}
+
+/* Adjust node colors for dark mode */
+.dark .node {
+  filter: brightness(0.85);
 }
