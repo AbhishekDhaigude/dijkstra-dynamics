@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
+import { Weight } from "lucide-react";
 
 interface GraphCanvasProps {
   graph: Graph;
@@ -41,18 +42,24 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
   const [popoverOpen, setPopoverOpen] = useState(false);
   const [selectingForAlgorithm, setSelectingForAlgorithm] = useState(false);
   const [nodeSelectionPurpose, setNodeSelectionPurpose] = useState<'start' | 'end' | null>(null);
+  const [popoverPosition, setPopoverPosition] = useState({ x: 0, y: 0 });
   
   // Force the popover to open when pendingEdge is set
   useEffect(() => {
     if (pendingEdge) {
-      // Small delay to ensure DOM is ready
-      const timer = setTimeout(() => {
-        setPopoverOpen(true);
-      }, 50);
+      // Calculate popover position between the two nodes
+      const sourceNode = graph.nodes.find(n => n.id === pendingEdge.source);
+      const targetNode = graph.nodes.find(n => n.id === pendingEdge.target);
       
-      return () => clearTimeout(timer);
+      if (sourceNode && targetNode) {
+        const midpoint = findEdgeMidpoint(sourceNode, targetNode);
+        setPopoverPosition({ x: midpoint.x, y: midpoint.y });
+      }
+      
+      // Ensure popover opens
+      setPopoverOpen(true);
     }
-  }, [pendingEdge]);
+  }, [pendingEdge, graph.nodes]);
   
   const handleCanvasClick = (e: React.MouseEvent) => {
     if (mode !== 'edit' || isRunning) {
@@ -109,6 +116,11 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
           } else {
             setEdgeWeight(1);
           }
+          
+          // Force popover to open after state update
+          setTimeout(() => {
+            setPopoverOpen(true);
+          }, 10);
         } else {
           toast.info("Edge already exists between these nodes");
           setSelectedNode(null);
@@ -391,34 +403,48 @@ const GraphCanvas: React.FC<GraphCanvasProps> = ({
       </svg>
       
       {/* Edge Weight Popover */}
-      <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
-        {/* Using a dummy div as trigger since we control open state programmatically */}
-        <PopoverTrigger asChild>
-          <div className="hidden">Trigger</div>
-        </PopoverTrigger>
-        <PopoverContent className="w-80">
-          <div className="space-y-4">
-            <h3 className="font-medium text-sm">Set Edge Weight</h3>
-            <div className="flex items-center space-x-2">
-              <span className="text-sm">1</span>
-              <Slider
-                value={[edgeWeight]}
-                min={1}
-                max={20}
-                step={1}
-                onValueChange={(value) => setEdgeWeight(value[0])}
-                className="flex-1"
-              />
-              <span className="text-sm">20</span>
-            </div>
-            <div className="text-center text-lg font-bold">{edgeWeight}</div>
-            <div className="flex justify-end space-x-2">
-              <Button variant="outline" size="sm" onClick={cancelEdgeCreation}>Cancel</Button>
-              <Button size="sm" onClick={confirmEdgeCreation}>Confirm</Button>
-            </div>
-          </div>
-        </PopoverContent>
-      </Popover>
+      {pendingEdge && (
+        <div 
+          className="absolute"
+          style={{ 
+            left: `${popoverPosition.x}px`, 
+            top: `${popoverPosition.y}px`,
+            transform: 'translate(-50%, -50%)'
+          }}
+        >
+          <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+            <PopoverTrigger asChild>
+              <div className="w-6 h-6 opacity-0">Trigger</div>
+            </PopoverTrigger>
+            <PopoverContent className="w-80 p-4 bg-white shadow-lg rounded-lg border border-gray-200">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-medium text-sm flex items-center">
+                    <Weight className="h-4 w-4 mr-2" /> Set Edge Weight
+                  </h3>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm">1</span>
+                  <Slider
+                    value={[edgeWeight]}
+                    min={1}
+                    max={20}
+                    step={1}
+                    onValueChange={(value) => setEdgeWeight(value[0])}
+                    className="flex-1"
+                  />
+                  <span className="text-sm">20</span>
+                </div>
+                <div className="text-center text-lg font-bold">{edgeWeight}</div>
+                <div className="flex justify-end space-x-2">
+                  <Button variant="outline" size="sm" onClick={cancelEdgeCreation}>Cancel</Button>
+                  <Button size="sm" onClick={confirmEdgeCreation}>Confirm</Button>
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+        </div>
+      )}
       
       {/* Instructions */}
       {mode === 'edit' && !isRunning && graph.nodes.length === 0 && (
